@@ -1,4 +1,4 @@
-# kernel-methods
+# Kernel Methods Data Challenge
 
 Run `pip install -r requirements.txt`
 
