@@ -3,15 +3,16 @@ import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 from cvxopt import matrix, solvers
 import os
 
-X_train0 = pd.read_csv('/kaggle/input/machine-learning-with-kernel-methods-2021/Xtr0.csv',  sep=',', header=0, index_col=0)
-X_test0 = pd.read_csv('/kaggle/input/machine-learning-with-kernel-methods-2021/Xte0.csv', sep=',', header=0, index_col=0)
-y_train0 = pd.read_csv('/kaggle/input/machine-learning-with-kernel-methods-2021/Ytr0.csv', index_col=0)
-X_train1 = pd.read_csv('/kaggle/input/machine-learning-with-kernel-methods-2021/Xtr1.csv', sep=',', header=0, index_col=0)
-X_test1 = pd.read_csv('/kaggle/input/machine-learning-with-kernel-methods-2021/Xte1.csv', sep=',', header=0, index_col=0)
-y_train1 = pd.read_csv('/kaggle/input/machine-learning-with-kernel-methods-2021/Ytr1.csv', index_col=0)
-X_train2 = pd.read_csv('/kaggle/input/machine-learning-with-kernel-methods-2021/Xtr2.csv', sep=',', header=0, index_col=0)
-X_test2 = pd.read_csv('/kaggle/input/machine-learning-with-kernel-methods-2021/Xte2.csv', sep=',', header=0, index_col=0)
-y_train2 = pd.read_csv('/kaggle/input/machine-learning-with-kernel-methods-2021/Ytr2.csv', index_col=0)
+print("Loading data\n")
+X_train0 = pd.read_csv('data/Xtr0.csv',  sep=',', header=0, index_col=0)
+X_test0 = pd.read_csv('data/Xte0.csv', sep=',', header=0, index_col=0)
+y_train0 = pd.read_csv('data/Ytr0.csv', index_col=0)
+X_train1 = pd.read_csv('data/Xtr1.csv', sep=',', header=0, index_col=0)
+X_test1 = pd.read_csv('data/Xte1.csv', sep=',', header=0, index_col=0)
+y_train1 = pd.read_csv('data/Ytr1.csv', index_col=0)
+X_train2 = pd.read_csv('data/Xtr2.csv', sep=',', header=0, index_col=0)
+X_test2 = pd.read_csv('data/Xte2.csv', sep=',', header=0, index_col=0)
+y_train2 = pd.read_csv('data/Ytr2.csv', index_col=0)
 
 def convert_to_array(X_train, X_test, y_train):
     
@@ -73,11 +74,13 @@ def k_spectrum_features(k, X, dictionary):
         
     
     return X_feature
-  
+
+print("Cleaning data\n")  
 X_train0, X_test0, y_train0 = convert_to_array(X_train0, X_test0, y_train0)
 X_train1, X_test1, y_train1 = convert_to_array(X_train1, X_test1, y_train1)
 X_train2, X_test2, y_train2 = convert_to_array(X_train2, X_test2, y_train2)
 
+print("Computing kernel matrix for train and test set (1/3)...\n")
 alphabet = 'ATGC'
 
 k = 4
@@ -88,6 +91,7 @@ spectrum_kernel_train0 = np.dot(X_train0_features, X_train0_features.T)
 X_test0_features = k_spectrum_features(k, X_test0, dictionary)
 #X_val0_features = k_spectrum_features(k, X_val0, dictionary)
 
+print("Computing kernel matrix for train and test set (2/3)...\n")
 k=5
 dictionary = compute_dictionary(k, alphabet)
 
@@ -95,6 +99,7 @@ X_train1_features = k_spectrum_features(k, X_train1, dictionary)
 spectrum_kernel_train1 = np.dot(X_train1_features, X_train1_features.T)
 X_test1_features = k_spectrum_features(k, X_test1, dictionary)
 #X_val1_features = k_spectrum_features(k, X_val1, dictionary)
+print("Computing kernel matrix for train and test set (3/3)...\n")
 X_train2_features = k_spectrum_features(k, X_train2, dictionary)
 spectrum_kernel_train2 = np.dot(X_train2_features, X_train2_features.T)
 X_test2_features = k_spectrum_features(k, X_test2, dictionary)
@@ -138,15 +143,17 @@ C=0.01
 clf1 = SVM_K(C)
 clf2 = SVM_K(C)
 
+print("Fitting classifiers\n")
 clf0.fit(spectrum_kernel_train0, X_train0_features, y_train0)
 clf1.fit(spectrum_kernel_train1, X_train1_features, y_train1)
 clf2.fit(spectrum_kernel_train2, X_train2_features, y_train2)
 
+print("Computing predictions on the test set\n")
 predict0 = clf0.predict(X_test0_features)
 predict1 = clf1.predict(X_test1_features)
 predict2 = clf2.predict(X_test2_features)
 
 predictions = pd.DataFrame({'Id': range(3000), 'Bound' : ((np.hstack([predict0, predict1, predict2]) + 1)/2).astype('int')}).set_index('Id')
-predictions.to_csv('submission_spectrum.csv')
+predictions.to_csv('results/submission_spectrum.csv')
 
-print("predictions saved as submission_spectrum.csv")
+print("Predictions saved as results/submission_spectrum.csv\n")
