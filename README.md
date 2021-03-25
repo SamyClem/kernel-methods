@@ -10,3 +10,5 @@ data/Xte0.csv
 ```
 
 etc...
+
+Then run `python main.py`.
