@@ -1,6 +1,6 @@
 # kernel-methods
 
-`pip install -r requirements.txt`
+Run `pip install -r requirements.txt`
 
 Put the data in data/, for example you should have :
 
