@@ -10,4 +10,4 @@ data/Xte0.csv
 etc...
 ```
 
-Then run `python main.py`.
+Then run `python main.py` from the `kernel-methods` folder.
