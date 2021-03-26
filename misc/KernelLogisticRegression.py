@@ -1,15 +1,120 @@
-import numpy as np
-from util import *
-import pandas as pd 
+import numpy as np # linear algebra
+import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+
+import itertools
+#from scipy.sparse import csr_matrix
+
+import time
+
+
+
+
 import os
 
 
+X_train = pd.read_csv('data/Xtr0_mat100.csv', sep=' ', header=None)
+X_test = pd.read_csv('data/Xte0_mat100.csv', sep=' ', header=None)
+y_train = pd.read_csv('data/Ytr0.csv', index_col=0)
+
+#Loss
+
+def sigmoid(z):
+    
+    return 1./(1. + np.exp(-z))
+
+def logistic_loss(z):
+    
+    return -np.log(sigmoid(z))
+
+def logistic_grad(z):
+    
+    return -sigmoid(-z)
+
+def logistic_hess(z):
+    
+    return sigmoid(z)*sigmoid(-z)
+
+
+
+#Kernels
+
+def linear_kernel(u,v):
+    
+    return np.dot(u,v)
+
+def gaussian_kernel(x,y, sigma=1):
+    
+    return np.exp(-np.linalg.norm(x-y, ord=2)/(2*sigma**2))
+
+def compute_gram_matrix(X, kernel):
+    
+    n = X.shape[0]
+    gram_matrix = np.zeros((n,n))
+    
+    for i in range(n):
+        for j in range(i,n):
+            gram_matrix[i, j] = kernel(X[i], X[j])
+    
+    gram_matrix = gram_matrix + gram_matrix.T + np.diag(gram_matrix.diagonal())    
+    return gram_matrix
+
+
+#Utilitaire
+
+def compute_prediction(f_hat):
+    
+    return np.sign(f_hat)
+
+
+def compute_margin(f_hat, y):
+    
+    return y*f_hat
+
+def compute_functionnal_norm(K, alpha):
+    """
+    K -- Kernel matrix
+    alpha -- coordinates
+    
+    """
+    
+    product = np.dot(K, alpha)
+    
+    return np.dot(alpha, product)
+    
+def normalize_data(data):
+    
+    mean_data = np.mean(data)
+    std_data = np.std(data)
+    
+    data = (data - mean_data)/std_data
+    
+    return data
+    
+def preprocess(X_train, X_test, y_train, val_split = False):
+    X_train = X_train.to_numpy()
+    y_train = (2*y_train - 1).to_numpy().T[0] # y=-1,1
+    if val_split == True:
+        X_train, X_val = np.split(X_train, [1500])
+        y_train, y_val = np.split(y_train, [1500])
+    X_test = X_test.to_numpy()    
+    #rescaling
+    mean_train = X_train.mean()
+    std_train = X_train.std()
+    X_train = (X_train - mean_train)/std_train
+    if val_split == True:
+        X_val = (X_val - mean_train)/std_train
+    X_test = (X_test - mean_train)/std_train
+    if val_split == True :
+        return X_train, X_test, X_val, y_train, y_val
+    else:
+        return X_train, X_test, y_train
+
+X_train, X_test, X_val, y_train, y_val = preprocess(X_train, X_test, y_train, True)
 
 class WKRR():
     
-    def __init__(self, kernel="gauss", C, sigma=2):
+    def __init__(self, kernel="gauss", sigma=2):
         
-        self.C = C
         self.sigma = sigma
         if kernel == "gauss":
             self.K = self.gaussian_kernel
@@ -17,8 +122,9 @@ class WKRR():
         if kernel =="linear":
             self.K = self.linear_kernel
     
-    def fit(self,X, y, w, gram_normalization=False):
+    def fit(self,X, y, w, C=1e0, gram_normalization=False):
         
+        self.C = C
         self.X = X
         self.y = y.astype(np.double)
         self.n = self.X.shape[0]
@@ -42,7 +148,6 @@ class WKRR():
         pass
     
     def predict_one(self,x):
-        
         prods = np.array([self.K(x,X) for X in self.X])
         return np.sign(np.dot(prods, self.alpha))
         pass
@@ -71,13 +176,9 @@ class WKRR():
         
         return gram_matrix
 
-
-
-
 class KernelLogisticRegression():
     
-    def __init__(self, kernel="gauss", C, sigma=2):
-        self.C = C
+    def __init__(self, kernel="gauss", sigma=2):
         self.sigma = sigma
         if kernel == "gauss":
             self.K = self.gaussian_kernel
@@ -85,8 +186,9 @@ class KernelLogisticRegression():
         if kernel =="linear":
             self.K = self.linear_kernel
     
-    def fit(self,X, y, n_iter=100, gram_normalization=False):
+    def fit(self,X, y, C=1e0, n_iter=100, gram_normalization=False):
         
+        self.C = C
         self.X = X
         self.y = y.astype(np.double)
         self.n = self.X.shape[0]
@@ -109,11 +211,11 @@ class KernelLogisticRegression():
         
         z_0 = m_0 + self.y/sigmoid(self.y*m_0)
         
-        wkrr = WKRR(C=self.C)
+        wkrr = WKRR()
 
         for i in range(n_iter):
             
-            wkrr.fit(self.X, z_0, W_0)
+            wkrr.fit(self.X, z_0, W_0, C=self.C)
             self.alpha = wkrr.alpha
 
             m_0 = np.dot(self.K_train, self.alpha)
@@ -152,44 +254,12 @@ class KernelLogisticRegression():
         
         return gram_matrix
 
-
-if __name__ =='__main__':
-
-    print("Loading data\n")
-    X_train0 = pd.read_csv('data/Xtr0.csv',  sep=',', header=0, index_col=0)
-    X_test0 = pd.read_csv('data/Xte0.csv', sep=',', header=0, index_col=0)
-    y_train0 = pd.read_csv('data/Ytr0.csv', index_col=0)
-    X_train1 = pd.read_csv('data/Xtr1.csv', sep=',', header=0, index_col=0)
-    X_test1 = pd.read_csv('data/Xte1.csv', sep=',', header=0, index_col=0)
-    y_train1 = pd.read_csv('data/Ytr1.csv', index_col=0)
-    X_train2 = pd.read_csv('data/Xtr2.csv', sep=',', header=0, index_col=0)
-    X_test2 = pd.read_csv('data/Xte2.csv', sep=',', header=0, index_col=0)
-    y_train2 = pd.read_csv('data/Ytr2.csv', index_col=0)
-
-
-    print("Cleaning data\n")  
-    X_train0, X_test0, y_train0 = convert_to_array(X_train0, X_test0, y_train0)
-    X_train1, X_test1, y_train1 = convert_to_array(X_train1, X_test1, y_train1)
-    X_train2, X_test2, y_train2 = convert_to_array(X_train2, X_test2, y_train2)
-
-    C=0.1
-    clf0 = KernelLogisticRegression(C)
-    C=0.01
-    clf1 = KernelLogisticRegression(C)
-    clf2 = KernelLogisticRegression(C)
-
-
-    print("Fitting classifiers\n")
-    clf0.fit(X_train0, y_train0)
-    clf1.fit(X_train1, y_train1)
-    clf2.fit(X_train2, y_train2)
-
-    print("Computing predictions on the test set\n")
-    predict0 = clf0.predict(X_test0)
-    predict1 = clf1.predict(X_test1)
-    predict2 = clf2.predict(X_test2)
-
-    predictions = pd.DataFrame({'Id': range(3000), 'Bound' : ((np.hstack([predict0, predict1, predict2]) + 1)/2).astype('int')}).set_index('Id')
-    predictions.to_csv('results/submission.csv')
-
-    print("Predictions saved as results/submission.csv\n")
+for i, epsilon in enumerate([1e-3, 1e-2, 1e-1, 1e0, 1e1]):
+    
+    print('Epsilon: {}'.format(epsilon))
+    clf0 = KernelLogisticRegression()
+    clf0.fit(X_train, y_train, C=epsilon, n_iter=10)
+    print('Training score:')
+    print(clf0.score(X_train,y_train))
+    print('Validation score:')
+    print(clf0.score(X_val,y_val))

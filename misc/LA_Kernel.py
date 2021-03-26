@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from util import *
 
 
@@ -56,10 +57,35 @@ class LAKernel():
 
 if __name__ == '__main__':
 
+
+    print("Loading data\n")
+    X_train0 = pd.read_csv('data/Xtr0.csv',  sep=',', header=0, index_col=0)
+    X_test0 = pd.read_csv('data/Xte0.csv', sep=',', header=0, index_col=0)
+    y_train0 = pd.read_csv('data/Ytr0.csv', index_col=0)
+    X_train1 = pd.read_csv('data/Xtr1.csv', sep=',', header=0, index_col=0)
+    X_test1 = pd.read_csv('data/Xte1.csv', sep=',', header=0, index_col=0)
+    y_train1 = pd.read_csv('data/Ytr1.csv', index_col=0)
+    X_train2 = pd.read_csv('data/Xtr2.csv', sep=',', header=0, index_col=0)
+    X_test2 = pd.read_csv('data/Xte2.csv', sep=',', header=0, index_col=0)
+    y_train2 = pd.read_csv('data/Ytr2.csv', index_col=0)
+
     S = np.identity(4)
     alphabet_dict = dict({"A": 0, "T":1, "C":2, "G":3})
 
+    
     lak = LAKernel(S, d=1, e=1, beta=0.5)
     
-    LA_Kernel = compute_gram_matrix(x, lak.la_kernel)
+    la_kernel_train0 = compute_gram_matrix(X_train0, lak.la_kernel)
+    la_kernel_train1 = compute_gram_matrix(X_train1, lak.la_kernel)
+    la_kernel_train1 = compute_gram_matrix(X_train2, lak.la_kernel)
+
+    la_kernel_test0 = compute_gram_matrix(X_test0, lak.la_kernel)
+    la_kernel_test1 = compute_gram_matrix(X_test1, lak.la_kernel)
+    la_kernel_test1 = compute_gram_matrix(X_test2, lak.la_kernel)
+
+
+
+
+    
+
 

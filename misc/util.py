@@ -33,6 +33,30 @@ def compute_dictionary(k, alphabet):
         """
         
         return np.array([''.join(i) for i in itertools.product(alphabet, repeat = k)])
+
+
+def k_spectrum_features(k, X, dictionary):
+    
+    #Dimension of the pb
+    n = X.shape[0]
+    p = dictionary.shape[0]
+    
+    #Initialisation of feature matrix
+    X_feature = np.zeros((X.shape[0], dictionary.shape[0]))
+        
+    
+    for i, word in enumerate(X):
+        l = len(word)
+        k_gram = np.array([''.join(word[u:u+k]) for u in range(l-k+1)])
+        
+        for j, key in enumerate(dictionary):
+            
+            for w in k_gram:
+                if w == key:
+                    X_feature[i, j] += 1
+        
+    
+    return X_feature
     
 def compute_gram_matrix(X, kernel): 
 
